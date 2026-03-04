@@ -100,32 +100,19 @@ function App() {
             accept=".adoc,.txt"
             className="hidden"
           />
-          <button
-            onClick={handleImport}
-            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium shadow-sm transition-colors"
-          >
-            Open File (.adoc / .txt)
-          </button>
-          <button
-            onClick={handleExport}
-            className={`px-4 py-2 rounded-md font-medium shadow-sm transition-colors text-white ${isDirty
-                ? 'bg-orange-500 hover:bg-orange-600 ring-2 ring-orange-300'
-                : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            title={isDirty ? 'You have unsaved changes!' : 'Export to AsciiDoc'}
-          >
-            {isDirty ? '⚠ Export to .adoc' : 'Export to .adoc'}
-          </button>
         </div>
       </div>
 
-      <div className="w-full max-w-5xl flex-1 max-h-[800px] mb-8 shadow-lg">
+      <div className="w-full max-w-5xl flex-1 mb-8 shadow-lg">
         <Editor
           initialContent="<h1>Welcome to the AsciiDoc Editor</h1><p>Start typing here...</p>"
           onUpdate={() => setIsDirty(true)}
           onEditorReady={(editor) => {
             editorRef.current = editor;
           }}
+          onExport={handleExport}
+          onImport={handleImport}
+          isDirty={isDirty}
         />
       </div>
     </div>

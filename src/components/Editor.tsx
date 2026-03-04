@@ -15,9 +15,12 @@ interface EditorProps {
     onUpdate?: (content: string) => void;
     // We expose the editor instance so the parent can access the AST
     onEditorReady?: (editor: any) => void;
+    onExport: () => void;
+    onImport: () => void;
+    isDirty: boolean;
 }
 
-const Editor: React.FC<EditorProps> = ({ initialContent = '', onUpdate, onEditorReady }) => {
+const Editor: React.FC<EditorProps> = ({ initialContent = '', onUpdate, onEditorReady, onExport, onImport, isDirty }) => {
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
@@ -55,10 +58,12 @@ const Editor: React.FC<EditorProps> = ({ initialContent = '', onUpdate, onEditor
     }, [editor]);
 
     return (
-        <div className="bg-white border text-left border-gray-300 rounded-lg shadow-sm overflow-hidden flex flex-col h-full">
-            <Toolbar editor={editor} />
-            <div className="flex-1 overflow-y-auto w-full max-w-4xl mx-auto cursor-text text-gray-800">
-                <EditorContent editor={editor} className="h-full" />
+        <div className="bg-white border text-left border-gray-300 rounded-lg shadow-sm flex flex-col min-h-[500px]">
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg">
+                <Toolbar editor={editor} onExport={onExport} onImport={onImport} isDirty={isDirty} />
+            </div>
+            <div className="flex-1 w-full max-w-4xl mx-auto cursor-text text-gray-800 p-4 rounded-b-lg">
+                <EditorContent editor={editor} className="min-h-[300px]" />
             </div>
         </div>
     );

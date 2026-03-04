@@ -3,11 +3,15 @@ import { type Editor } from '@tiptap/react';
 import {
     Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
     Bold, Italic, Strikethrough, List, ListOrdered,
-    Table as TableIcon, PaintBucket, Highlighter
+    Table as TableIcon, PaintBucket, Highlighter,
+    FileUp, FileDown
 } from 'lucide-react';
 
 interface ToolbarProps {
     editor: Editor | null;
+    onExport: () => void;
+    onImport: () => void;
+    isDirty: boolean;
 }
 
 const STANDARD_COLORS = [
@@ -29,7 +33,7 @@ const STANDARD_COLORS = [
     { name: 'Aqua', value: '#00FFFF' }
 ];
 
-const Toolbar: React.FC<ToolbarProps> = ({ editor }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty }) => {
     if (!editor) {
         return null;
     }
@@ -63,6 +67,24 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor }) => {
 
     return (
         <div className="flex flex-wrap items-center gap-1 p-2 bg-gray-50 border-b border-gray-200">
+            {/* File Operations */}
+            <div className="flex items-center space-x-1 border-r border-gray-300 pr-2 mr-1">
+                <button
+                    onClick={onImport}
+                    className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700"
+                    title="Import File"
+                >
+                    <FileUp size={18} />
+                </button>
+                <button
+                    onClick={onExport}
+                    className={`p-1.5 rounded transition-colors ${isDirty ? 'text-orange-600 bg-orange-50 hover:bg-orange-100' : 'text-gray-700 hover:bg-gray-200'}`}
+                    title={isDirty ? "Unsaved changes" : "Export to AsciiDoc"}
+                >
+                    <FileDown size={18} />
+                </button>
+            </div>
+
             {/* Headings */}
             <div className="flex items-center space-x-1 border-r border-gray-300 pr-2 mr-1">
                 {[
