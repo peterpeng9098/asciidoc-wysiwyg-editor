@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local Development binaries
+temp_node/
+temp_git/
+nodejs.zip
+

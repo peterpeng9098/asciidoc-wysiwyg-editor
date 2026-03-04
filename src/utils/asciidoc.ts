@@ -23,11 +23,33 @@ export const parseAsciiDocToHtml = (adocContent: string): string => {
     // Pre-clean legacy invalid syntaxes from earlier versions (e.g. class="color="#FF0000"")
     let cleanedHtml = normalized.replace(/class="color=(?:&quot;|")?(#[a-fA-F0-9]+)(?:&quot;|")?"?/g, 'class="color-$1"');
     cleanedHtml = cleanedHtml.replace(/class="background-color=(?:&quot;|")?(#[a-fA-F0-9]+)(?:&quot;|")?"?/g, 'class="bg-$1"');
+    // Ensure we don't have double hashes or invalid class names if the above replacement kept the hash
     cleanedHtml = cleanedHtml.replace(/color-#/g, 'color-').replace(/bg-#/g, 'bg-');
 
     // Use DOMParser to safely update span classes to inline styles for Tiptap
     const parser = new DOMParser();
     const doc = parser.parseFromString(cleanedHtml, 'text/html');
+
+    // Map of standard AsciiDoc color roles to CSS values
+    const colorMap: { [key: string]: string } = {
+        'black': '#000000',
+        'white': '#FFFFFF',
+        'red': '#FF0000',
+        'lime': '#00FF00',
+        'green': '#008000',
+        'blue': '#0000FF',
+        'yellow': '#FFFF00',
+        'orange': '#FFA500',
+        'purple': '#800080',
+        'gray': '#808080',
+        'silver': '#C0C0C0',
+        'navy': '#000080',
+        'aqua': '#00FFFF',
+        'teal': '#008080',
+        'fuchsia': '#FF00FF',
+        'maroon': '#800000',
+        'olive': '#808000'
+    };
 
     doc.querySelectorAll('span').forEach(span => {
         let hasMark = false;
@@ -43,6 +65,18 @@ export const parseAsciiDocToHtml = (adocContent: string): string => {
                 const hex = '#' + cls.replace('bg-', '');
                 hasMark = true;
                 markColor = hex;
+                span.classList.remove(cls);
+            } else if (cls.endsWith('-background')) {
+                // Handle standard background roles like .yellow-background
+                const colorName = cls.replace('-background', '');
+                if (colorMap[colorName]) {
+                    hasMark = true;
+                    markColor = colorMap[colorName];
+                    span.classList.remove(cls);
+                }
+            } else if (colorMap[cls]) {
+                // Handle standard color roles like .red, .blue
+                span.style.color = colorMap[cls];
                 span.classList.remove(cls);
             }
         });
@@ -90,14 +124,61 @@ export const parseAsciiDocToHtml = (adocContent: string): string => {
         }
     });
 
-    // Remove whitespace-only text nodes directly under body
-    Array.from(doc.body.childNodes).forEach(node => {
-        if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim() === '') {
-            doc.body.removeChild(node);
+    // Remove empty divs that might be left over
+    doc.body.querySelectorAll('div').forEach(div => {
+        if (!div.hasChildNodes()) {
+            div.remove();
         }
     });
 
-    return doc.body.innerHTML;
+    // Unwrap paragraphs inside list items if they are the only content
+    // This forces "tight" list rendering in many editors by removing the <p> tag's margin
+    doc.body.querySelectorAll('li > p').forEach(p => {
+        const li = p.parentNode;
+        // Check if p is the only element child (ignoring text nodes unless they are significant?)
+        // Actually, we want to unwrap if it's just a simple list item.
+        // But if there are multiple paragraphs, we should keep them.
+        // Let's be safe: if the LI has only ONE child element and it is this P, unwrap it.
+        // We also need to be careful about nested lists which might be siblings of the P.
+        
+        // Count element children of the parent LI
+        const children = Array.from(li?.children || []);
+        const otherElements = children.filter(c => c !== p && !['UL', 'OL'].includes(c.tagName));
+        
+        if (li && otherElements.length === 0) {
+            // Check if there are significant text nodes? Asciidoctor usually puts everything in P or not.
+            
+            // Move all child nodes of P to LI, before the P
+            while (p.firstChild) {
+                li.insertBefore(p.firstChild, p);
+            }
+            p.remove();
+        }
+    });
+
+    // Remove text nodes that are just whitespace inside LIs (before/after nested lists or text)
+    // This is crucial because Asciidoctor adds newlines that Tiptap might interpret as content
+    doc.body.querySelectorAll('li').forEach(li => {
+        Array.from(li.childNodes).forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim() === '') {
+                 li.removeChild(node);
+            }
+        });
+    });
+    
+    let html = doc.body.innerHTML;
+    
+    // Normalize whitespace between block-level elements to prevent extra spacing
+    // We target newlines and spaces between closing and opening tags of block elements
+    // This is safer than a global replace which might eat space between spans
+    html = html.replace(/(<\/p>|<\/ul>|<\/ol>|<\/li>|<\/h[1-6]>|<\/div>|<\/table>)\s+(<p|<ul|<ol|<li|<h[1-6]|<div|<table)/g, '$1$2');
+
+    // Also remove whitespace immediately after opening tags of block elements if followed by text
+    // e.g. <li>\nText -> <li>Text
+    html = html.replace(/(<li[^>]*>)\s+/g, '$1');
+    html = html.replace(/\s+(<\/li>)/g, '$1');
+
+    return html;
 };
 
 // Helper to convert browser-normalized rgb(r, g, b) back to #RRGGBB hex
@@ -150,12 +231,53 @@ const processNode = (node: any): string => {
 const processList = (listNode: any, marker: string): string => {
     if (!listNode.content) return '';
     return listNode.content.map((listItem: any) => {
-        // A list item usually contains a paragraph
-        const p = listItem.content?.[0];
-        const text = p ? processMarks(p) : '';
-        return `${marker} ${text}`;
+        if (!listItem.content) return '';
+        
+        let result = `${marker} `;
+        
+        listItem.content.forEach((child: any, index: number) => {
+            const isList = child.type === 'bulletList' || child.type === 'orderedList';
+            
+            if (index > 0) {
+                 // specific check: if previous was paragraph and this is paragraph -> use +
+                 // if this is list -> just newline
+                 const prev = listItem.content[index-1];
+                 const prevIsList = prev.type === 'bulletList' || prev.type === 'orderedList';
+                 
+                 if (!isList && !prevIsList) {
+                     result += '\n+\n';
+                 } else {
+                     result += '\n';
+                 }
+            }
+            
+            if (child.type === 'paragraph') {
+                result += processMarks(child);
+            } else if (child.type === 'bulletList') {
+                // If the parent is a bullet list, extend the marker (e.g. * -> **)
+                // If the parent is an ordered list, reset to * (AsciiDoc handles mixed lists by context)
+                let childMarker = '*';
+                if (marker.startsWith('*')) {
+                     childMarker = marker + '*';
+                }
+                // If we are deep in an ordered list (e.g. ..) and switch to bullet, start at *
+                
+                result += processList(child, childMarker);
+            } else if (child.type === 'orderedList') {
+                let childMarker = '.';
+                if (marker.startsWith('.')) {
+                     childMarker = marker + '.';
+                }
+                result += processList(child, childMarker);
+            } else {
+                result += processNode(child);
+            }
+        });
+        
+        return result;
     }).join('\n');
 };
+
 
 const processTable = (tableNode: any): string => {
     let tableAdoc = '|===\n';
@@ -199,16 +321,74 @@ const processMarks = (node: any): string => {
                 });
 
                 // In AsciiDoc, you can combine multiple roles like [.role1.role2]#text#
-                let roles: string[] = [];
-                if (isStrike) roles.push('line-through');
-                if (color) roles.push(`color-${color.replace('#', '')}`);
-                if (bgColor) roles.push(`bg-${bgColor.replace('#', '')}`);
-
-                if (roles.length > 0) {
-                    text = `[.${roles.join('.')}]##${text}##`;
+                // User prefers simple syntax like [green]##text## if possible.
+                // We map common HEX colors to names, or use pass:[...] for custom HEX.
+                
+                const colorMap: { [key: string]: string } = {
+                    '#000000': 'black',
+                    '#FFFFFF': 'white',
+                    '#FF0000': 'red',
+                    '#00FF00': 'lime', // Standard CSS lime is #00FF00
+                    '#008000': 'green',
+                    '#0000FF': 'blue',
+                    '#FFFF00': 'yellow',
+                    '#FFA500': 'orange',
+                    '#800080': 'purple',
+                    '#808080': 'gray',
+                    '#C0C0C0': 'silver',
+                    '#000080': 'navy',
+                    '#00FFFF': 'aqua',
+                    '#008080': 'teal',
+                    '#FF00FF': 'fuchsia',
+                    '#800000': 'maroon',
+                    '#808000': 'olive'
+                };
+                
+                // Helper to find closest color or exact match? Exact match is safer.
+                // Tiptap often uses standard palette.
+                
+                let colorName = '';
+                if (color && colorMap[color.toUpperCase()]) {
+                    colorName = colorMap[color.toUpperCase()];
+                }
+                
+                let bgColorName = '';
+                if (bgColor && colorMap[bgColor.toUpperCase()]) {
+                    bgColorName = colorMap[bgColor.toUpperCase()];
+                }
+                
+                // Determine if we can use standard AsciiDoc role syntax
+                // We can use it if we have at least one standard color and NO custom colors that would require inline styles
+                const hasCustomColor = color && !colorName;
+                const hasCustomBg = bgColor && !bgColorName;
+                
+                if (!hasCustomColor && !hasCustomBg && (colorName || bgColorName)) {
+                    // Use standard role syntax: [color]##text## or [color-background]##text##
+                    // User requested [yellow-background]##text## which is cleaner
+                    
+                    const roles: string[] = [];
+                    if (colorName) roles.push(colorName);
+                    if (bgColorName) roles.push(`${bgColorName}-background`);
+                    
+                    // Join roles.
+                    const roleString = roles.join(' ');
+                    text = `[${roleString}]##${text}##`;
+                    
+                } else {
+                    // Fallback to HTML passthrough for custom HEX or mixed cases
+                    let styleAttr = '';
+                    if (color) styleAttr += `color:${color};`;
+                    if (bgColor) styleAttr += `background-color:${bgColor};`;
+                    
+                    if (styleAttr) {
+                        text = `pass:[<span style="${styleAttr}">${text}</span>]`;
+                    }
                 }
 
-                // Wrap with bold/italic last (outermost) using unconstrained formatting
+                if (isStrike) {
+                     text = `[line-through]#${text}#`;
+                }
+
                 if (isBold) text = `**${text}**`;
                 if (isItalic) text = `__${text}__`;
             }
