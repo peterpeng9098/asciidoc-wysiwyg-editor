@@ -86,11 +86,11 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10 px-4 font-sans text-gray-900">
-      <div className="w-full max-w-5xl mb-6 flex justify-between items-end">
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center py-6 px-4 font-sans text-gray-900">
+      <div className="w-full max-w-5xl mb-4 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">AsciiDoc WYSIWYG Editor</h1>
-          <p className="text-gray-500 mt-1">Edit visually, export to `.adoc` instantly.</p>
+          <h1 className="text-xl font-bold text-gray-800">AsciiDoc WYSIWYG Editor</h1>
+          <p className="text-sm text-gray-500 mt-1">Edit visually, export to `.adoc` instantly.</p>
         </div>
         <div className="flex gap-3">
           <input
