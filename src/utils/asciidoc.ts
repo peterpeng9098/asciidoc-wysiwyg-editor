@@ -103,18 +103,27 @@ export const parseAsciiDocToHtml = (adocContent: string): string => {
     // Aggressively flatten all <div> containers (we only care about <p>, <h*>, <ul>, <ol>, <table>).
     // Loop until no more divs remain outside of tables so we handle any nesting depth.
     let divs = Array.from(doc.body.querySelectorAll('div'));
-    while (divs.length > 0) {
+    let hasChanges = true;
+    
+    while (hasChanges && divs.length > 0) {
+        hasChanges = false;
         divs.forEach(div => {
             // Keep divs that are inside table cells
             if (div.closest('td, th')) return;
+            
             const parent = div.parentNode;
             if (!parent) return;
+            
             while (div.firstChild) {
                 parent.insertBefore(div.firstChild, div);
             }
             parent.removeChild(div);
+            hasChanges = true;
         });
-        divs = Array.from(doc.body.querySelectorAll('div'));
+        
+        if (hasChanges) {
+             divs = Array.from(doc.body.querySelectorAll('div'));
+        }
     }
 
     // Remove empty <p> elements (including whitespace-only ones) that Asciidoctor might leave behind
