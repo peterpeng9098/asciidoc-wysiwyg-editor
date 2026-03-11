@@ -156,27 +156,29 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty }
                     <button className="flex items-center p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Text Color">
                         <PaintBucket size={16} />
                     </button>
-                    <div className="absolute top-full left-0 mt-1 hidden group-hover:block bg-white border border-gray-200 shadow-xl rounded-md p-2 z-50 w-48">
-                        <div className="text-xs text-gray-500 mb-2 font-semibold">Standard Colors</div>
-                        <div className="grid grid-cols-4 gap-1 mb-3">
-                            {STANDARD_COLORS.map(color => (
-                                <button
-                                    key={`text-${color.value}`}
-                                    className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:scale-110 transition-transform"
-                                    style={{ backgroundColor: color.value }}
-                                    title={color.name}
-                                    onClick={() => editor.chain().focus().setColor(color.value).run()}
+                    <div className="absolute top-full left-0 pt-1 hidden group-hover:block z-50 w-48">
+                        <div className="bg-white border border-gray-200 shadow-xl rounded-md p-2">
+                            <div className="text-xs text-gray-500 mb-2 font-semibold">Standard Colors</div>
+                            <div className="grid grid-cols-4 gap-1 mb-3">
+                                {STANDARD_COLORS.map(color => (
+                                    <button
+                                        key={`text-${color.value}`}
+                                        className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:scale-110 transition-transform"
+                                        style={{ backgroundColor: color.value }}
+                                        title={color.name}
+                                        onClick={() => editor.chain().focus().setColor(color.value).run()}
+                                    />
+                                ))}
+                            </div>
+                            <div className="text-xs text-gray-500 mb-1 font-semibold flex justify-between items-center">
+                                Custom Color
+                                <input
+                                    type="color"
+                                    onChange={setTextColor}
+                                    value={editor.getAttributes('textStyle').color || '#000000'}
+                                    className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
                                 />
-                            ))}
-                        </div>
-                        <div className="text-xs text-gray-500 mb-1 font-semibold flex justify-between items-center">
-                            Custom Color
-                            <input
-                                type="color"
-                                onChange={setTextColor}
-                                value={editor.getAttributes('textStyle').color || '#000000'}
-                                className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
-                            />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -186,27 +188,29 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty }
                     <button className="flex items-center p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Highlight Color">
                         <Highlighter size={16} />
                     </button>
-                    <div className="absolute top-full left-0 mt-1 hidden group-hover:block bg-white border border-gray-200 shadow-xl rounded-md p-2 z-50 w-48">
-                        <div className="text-xs text-gray-500 mb-2 font-semibold">Standard Highlights</div>
-                        <div className="grid grid-cols-4 gap-1 mb-3">
-                            {STANDARD_COLORS.map(color => (
-                                <button
-                                    key={`bg-${color.value}`}
-                                    className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:scale-110 transition-transform"
-                                    style={{ backgroundColor: color.value }}
-                                    title={color.name}
-                                    onClick={() => editor.chain().focus().toggleHighlight({ color: color.value }).run()}
+                    <div className="absolute top-full left-0 pt-1 hidden group-hover:block z-50 w-48">
+                        <div className="bg-white border border-gray-200 shadow-xl rounded-md p-2">
+                            <div className="text-xs text-gray-500 mb-2 font-semibold">Standard Highlights</div>
+                            <div className="grid grid-cols-4 gap-1 mb-3">
+                                {STANDARD_COLORS.map(color => (
+                                    <button
+                                        key={`bg-${color.value}`}
+                                        className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:scale-110 transition-transform"
+                                        style={{ backgroundColor: color.value }}
+                                        title={color.name}
+                                        onClick={() => editor.chain().focus().toggleHighlight({ color: color.value }).run()}
+                                    />
+                                ))}
+                            </div>
+                            <div className="text-xs text-gray-500 mb-1 font-semibold flex justify-between items-center">
+                                Custom Highlight
+                                <input
+                                    type="color"
+                                    onChange={setHighlight}
+                                    value={editor.getAttributes('highlight').color || '#ffff00'}
+                                    className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
                                 />
-                            ))}
-                        </div>
-                        <div className="text-xs text-gray-500 mb-1 font-semibold flex justify-between items-center">
-                            Custom Highlight
-                            <input
-                                type="color"
-                                onChange={setHighlight}
-                                value={editor.getAttributes('highlight').color || '#ffff00'}
-                                className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
-                            />
+                            </div>
                         </div>
                     </div>
                 </div>

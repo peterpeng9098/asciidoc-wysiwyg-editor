@@ -6,6 +6,7 @@ function App() {
   const editorRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [filename, setFilename] = useState<string>('document.adoc');
 
   // Show browser's native "Leave site?" dialog when there are unsaved changes
   useEffect(() => {
@@ -38,7 +39,7 @@ function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'document.adoc';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -60,6 +61,13 @@ function App() {
         console.log("Read file content:", text);
         const html = parseAsciiDocToHtml(text);
         console.log("Parsed HTML:", html);
+
+        // Save the filename for exporting later
+        let originalName = file.name;
+        if (!originalName.endsWith('.adoc')) {
+          originalName = originalName.replace(/\.[^/.]+$/, "") + ".adoc";
+        }
+        setFilename(originalName);
 
         // Two-step approach: clearContent first then insertContent.
         // This ensures Tiptap's internal document state transitions correctly,
