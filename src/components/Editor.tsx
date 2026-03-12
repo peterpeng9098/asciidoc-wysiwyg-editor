@@ -18,9 +18,10 @@ interface EditorProps {
     onExport: () => void;
     onImport: () => void;
     isDirty: boolean;
+    filename: string;
 }
 
-const Editor: React.FC<EditorProps> = ({ initialContent = '', onUpdate, onEditorReady, onExport, onImport, isDirty }) => {
+const Editor: React.FC<EditorProps> = ({ initialContent = '', onUpdate, onEditorReady, onExport, onImport, isDirty, filename }) => {
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
@@ -60,7 +61,7 @@ const Editor: React.FC<EditorProps> = ({ initialContent = '', onUpdate, onEditor
     return (
         <div className="bg-white border text-left border-gray-300 rounded-lg shadow-sm flex flex-col min-h-[500px]">
             <div className="sticky top-0 z-10 bg-white border-b border-gray-200 rounded-t-lg">
-                <Toolbar editor={editor} onExport={onExport} onImport={onImport} isDirty={isDirty} />
+                <Toolbar editor={editor} onExport={onExport} onImport={onImport} isDirty={isDirty} filename={filename} />
             </div>
             <div className="flex-1 w-full max-w-4xl mx-auto cursor-text text-gray-800 p-4 rounded-b-lg">
                 <EditorContent editor={editor} className="min-h-[300px]" />

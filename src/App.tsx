@@ -121,6 +121,7 @@ function App() {
           onExport={handleExport}
           onImport={handleImport}
           isDirty={isDirty}
+          filename={filename}
         />
       </div>
     </div>

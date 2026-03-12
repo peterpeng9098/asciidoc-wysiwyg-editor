@@ -12,6 +12,7 @@ interface ToolbarProps {
     onExport: () => void;
     onImport: () => void;
     isDirty: boolean;
+    filename: string;
 }
 
 const STANDARD_COLORS = [
@@ -33,7 +34,7 @@ const STANDARD_COLORS = [
     { name: 'Aqua', value: '#00FFFF' }
 ];
 
-const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty, filename }) => {
     if (!editor) {
         return null;
     }
@@ -283,6 +284,14 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty }
                         </div>
                     </div>
                 )}
+            </div>
+
+            <div
+                className="ml-auto flex items-center pr-2 text-sm text-gray-500 font-medium max-w-[250px]"
+                title={`${filename}${isDirty ? '*' : ''}`}
+            >
+                <span className="truncate flex-1 min-w-0">{filename}</span>
+                {isDirty && <span className="text-orange-500 font-bold ml-0.5 shrink-0">*</span>}
             </div>
 
         </div>
