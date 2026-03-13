@@ -7,6 +7,7 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [filename, setFilename] = useState<string>('document.adoc');
+  const [fileHandle, setFileHandle] = useState<any>(null);
 
   // Show browser's native "Leave site?" dialog when there are unsaved changes
   useEffect(() => {
@@ -21,7 +22,7 @@ function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const editorInstance = editorRef.current;
     if (!editorInstance) {
       console.warn("Editor not initialized or empty.");
@@ -34,6 +35,19 @@ function App() {
     // Fetch the latest AST directly from the editor instance at the moment of click
     console.log("Exporting AST:", json);
     const adocString = serializeTiptapToAsciiDoc(json);
+
+    if (fileHandle) {
+      try {
+        const writable = await fileHandle.createWritable();
+        await writable.write(adocString);
+        await writable.close();
+        setIsDirty(false);
+        console.log("Saved to existing file handle.");
+        return;
+      } catch (error) {
+        console.error("Failed to save to existing file handle:", error);
+      }
+    }
 
     const blob = new Blob([adocString], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -49,48 +63,73 @@ function App() {
     setIsDirty(false);
   };
 
+  const loadFileContent = async (file: File, handle: any = null) => {
+    const editorInstance = editorRef.current;
+    if (!editorInstance) return;
+
+    try {
+      const text = await file.text();
+      console.log("Read file content:", text);
+      const html = parseAsciiDocToHtml(text);
+      console.log("Parsed HTML:", html);
+
+      // Save the filename for exporting later
+      let originalName = file.name;
+      if (!originalName.endsWith('.adoc')) {
+        originalName = originalName.replace(/\.[^/.]+$/, "") + ".adoc";
+      }
+      setFilename(originalName);
+      setFileHandle(handle);
+
+      // Two-step approach: clearContent first then insertContent.
+      // This ensures Tiptap's internal document state transitions correctly,
+      // which is critical immediately after a fresh page load where setContent
+      // alone may silently fail to update the editor's React view.
+      setTimeout(() => {
+        editorInstance.commands.clearContent(true);
+        setTimeout(() => {
+          editorInstance.commands.insertContent(html);
+          setIsDirty(false); // Fresh load from file — not dirty yet
+        }, 0);
+      }, 50);
+    } catch (error) {
+      console.error("Error reading or parsing AsciiDoc:", error);
+      alert("Failed to load AsciiDoc file. See console for details.");
+    }
+  };
+
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    const editorInstance = editorRef.current;
-    if (!file || !editorInstance) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
-        console.log("Read file content:", text);
-        const html = parseAsciiDocToHtml(text);
-        console.log("Parsed HTML:", html);
-
-        // Save the filename for exporting later
-        let originalName = file.name;
-        if (!originalName.endsWith('.adoc')) {
-          originalName = originalName.replace(/\.[^/.]+$/, "") + ".adoc";
-        }
-        setFilename(originalName);
-
-        // Two-step approach: clearContent first then insertContent.
-        // This ensures Tiptap's internal document state transitions correctly,
-        // which is critical immediately after a fresh page load where setContent
-        // alone may silently fail to update the editor's React view.
-        setTimeout(() => {
-          editorInstance.commands.clearContent(true);
-          setTimeout(() => {
-            editorInstance.commands.insertContent(html);
-            setIsDirty(false); // Fresh load from file — not dirty yet
-          }, 0);
-        }, 50);
-      } catch (error) {
-        console.error("Error reading or parsing AsciiDoc:", error);
-        alert("Failed to load AsciiDoc file. See console for details.");
-      }
-    };
-    reader.readAsText(file);
+    if (!file) return;
+    loadFileContent(file, null);
     e.target.value = ''; // Reset input
   };
 
-  const handleImport = () => {
-    fileInputRef.current?.click();
+  const handleImport = async () => {
+    if ('showOpenFilePicker' in window) {
+      try {
+        const [handle] = await (window as any).showOpenFilePicker({
+          types: [
+            {
+              description: 'AsciiDoc Files',
+              accept: {
+                'text/plain': ['.adoc', '.txt'],
+                'application/octet-stream': ['.adoc']
+              },
+            },
+          ],
+        });
+        const file = await handle.getFile();
+        loadFileContent(file, handle);
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error("Error opening file picker:", error);
+          fileInputRef.current?.click(); // Fallback
+        }
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
   };
 
   return (

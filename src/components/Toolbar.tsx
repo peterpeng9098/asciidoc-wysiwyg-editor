@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { type Editor } from '@tiptap/react';
 import {
     Heading1, Heading2, Heading3, Heading4, Heading5, Heading6,
-    Bold, Italic, Strikethrough, List, ListOrdered,
+    Bold, Italic, Strikethrough, Underline as UnderlineIcon, List, ListOrdered,
     Table as TableIcon, PaintBucket, Highlighter,
     FileUp, FileDown
 } from 'lucide-react';
@@ -130,6 +130,13 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty, 
                 >
                     <Strikethrough size={18} />
                 </button>
+                <button
+                    onClick={() => editor.chain().focus().toggleUnderline().run()}
+                    className={`p-1.5 rounded hover:bg-gray-200 transition-colors ${editor.isActive('underline') ? 'bg-gray-200 text-blue-600' : 'text-gray-700'}`}
+                    title="Underline"
+                >
+                    <UnderlineIcon size={18} />
+                </button>
             </div>
 
             {/* Lists */}
@@ -171,7 +178,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty, 
                                     />
                                 ))}
                             </div>
-                            <div className="text-xs text-gray-500 mb-1 font-semibold flex justify-between items-center">
+                            <div className="text-xs text-gray-500 mb-1 mt-2 font-semibold flex justify-between items-center">
                                 Custom Color
                                 <input
                                     type="color"
@@ -180,6 +187,15 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty, 
                                     className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
                                 />
                             </div>
+                            <button
+                                onClick={() => editor.chain().focus().unsetColor().run()}
+                                className="w-full mt-2 flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded border border-transparent hover:border-gray-200 transition-colors"
+                            >
+                                <div className="w-4 h-4 border border-gray-300 bg-white flex items-center justify-center">
+                                     <div className="w-[18px] h-[1px] bg-red-500 transform rotate-45"></div>
+                                </div>
+                                無色彩
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -203,7 +219,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty, 
                                     />
                                 ))}
                             </div>
-                            <div className="text-xs text-gray-500 mb-1 font-semibold flex justify-between items-center">
+                            <div className="text-xs text-gray-500 mb-1 mt-2 font-semibold flex justify-between items-center">
                                 Custom Highlight
                                 <input
                                     type="color"
@@ -212,6 +228,15 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty, 
                                     className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
                                 />
                             </div>
+                            <button
+                                onClick={() => editor.chain().focus().unsetHighlight().run()}
+                                className="w-full mt-2 flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded border border-transparent hover:border-gray-200 transition-colors"
+                            >
+                                <div className="w-4 h-4 border border-gray-300 bg-white flex items-center justify-center overflow-hidden">
+                                     <div className="w-[18px] h-[1px] bg-red-500 transform rotate-45"></div>
+                                </div>
+                                無色彩
+                            </button>
                         </div>
                     </div>
                 </div>

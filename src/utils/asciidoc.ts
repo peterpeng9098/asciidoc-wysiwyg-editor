@@ -56,7 +56,18 @@ export const parseAsciiDocToHtml = (adocContent: string): string => {
         let markColor = '';
 
         const classNames = Array.from(span.classList);
-        classNames.forEach(cls => {
+        let hasUnderline = false;
+        
+        // Asciidoctor applies roles as classes. [.underline.red]#text# becomes class="underline red"
+        if (classNames.includes('underline')) {
+            hasUnderline = true;
+            span.classList.remove('underline');
+        }
+
+        // Re-get classes after potentially removing 'underline'
+        const remainingClassNames = Array.from(span.classList);
+        
+        remainingClassNames.forEach(cls => {
             if (cls.startsWith('color-')) {
                 const hex = '#' + cls.replace('color-', '');
                 span.style.color = hex;
@@ -87,13 +98,29 @@ export const parseAsciiDocToHtml = (adocContent: string): string => {
             mark.style.backgroundColor = markColor;
             mark.style.color = 'inherit';
 
-            if (span.classList.length === 0 && !span.style.color) {
+            if (span.classList.length === 0 && !span.style.color && !hasUnderline) {
                 mark.innerHTML = span.innerHTML;
                 span.replaceWith(mark);
             } else {
                 mark.innerHTML = span.innerHTML;
                 span.innerHTML = '';
                 span.appendChild(mark);
+            }
+        }
+        
+        // Wrap with <u> if underline role was present
+        // Note: we do this AFTER mark processing so <u> wraps the <mark> or vice versa
+        if (hasUnderline) {
+            const u = document.createElement('u');
+            
+            // If the span is empty of classes/styles and we just have the <u> text, replace it entirely
+            if (span.classList.length === 0 && !span.style.color && !hasMark) {
+                 u.innerHTML = span.innerHTML;
+                 span.replaceWith(u);
+            } else {
+                 u.innerHTML = span.innerHTML;
+                 span.innerHTML = '';
+                 span.appendChild(u);
             }
         }
     });
@@ -318,6 +345,7 @@ const processMarks = (node: any): string => {
                 let isBold = false;
                 let isItalic = false;
                 let isStrike = false;
+                let isUnderline = false;
                 let color = '';
                 let bgColor = '';
 
@@ -325,6 +353,7 @@ const processMarks = (node: any): string => {
                     if (mark.type === 'bold') isBold = true;
                     if (mark.type === 'italic') isItalic = true;
                     if (mark.type === 'strike') isStrike = true;
+                    if (mark.type === 'underline') isUnderline = true;
                     if (mark.type === 'textStyle' && mark.attrs.color) color = rgbToHex(mark.attrs.color);
                     if (mark.type === 'highlight' && mark.attrs.color) bgColor = rgbToHex(mark.attrs.color);
                 });
@@ -371,17 +400,19 @@ const processMarks = (node: any): string => {
                 const hasCustomColor = color && !colorName;
                 const hasCustomBg = bgColor && !bgColorName;
                 
-                if (!hasCustomColor && !hasCustomBg && (colorName || bgColorName)) {
+                if (!hasCustomColor && !hasCustomBg && (colorName || bgColorName || isUnderline)) {
                     // Use standard role syntax: [color]##text## or [color-background]##text##
-                    // User requested [yellow-background]##text## which is cleaner
+                    // Underline can be combined with these.
                     
                     const roles: string[] = [];
+                    if (isUnderline) roles.push('.underline');
                     if (colorName) roles.push(colorName);
                     if (bgColorName) roles.push(`${bgColorName}-background`);
                     
                     // Join roles.
                     const roleString = roles.join(' ');
                     text = `[${roleString}]##${text}##`;
+                    isUnderline = false; // Mark as handled
                     
                 } else {
                     // Fallback to HTML passthrough for custom HEX or mixed cases
@@ -396,6 +427,9 @@ const processMarks = (node: any): string => {
 
                 if (isStrike) {
                      text = `[line-through]#${text}#`;
+                }
+                if (isUnderline) {
+                     text = `[.underline]#${text}#`;
                 }
 
                 if (isBold) text = `**${text}**`;
