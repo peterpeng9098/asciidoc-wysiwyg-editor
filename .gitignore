@@ -28,3 +28,7 @@ temp_node/
 temp_git/
 nodejs.zip
 
+  
+# Local meeting minutes and temp debug files  
+*.adoc  
+tsc-error.txt 
