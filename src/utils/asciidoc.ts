@@ -348,6 +348,7 @@ const processMarks = (node: any): string => {
                 let isUnderline = false;
                 let color = '';
                 let bgColor = '';
+                let linkHref = '';
 
                 textNode.marks.forEach((mark: any) => {
                     if (mark.type === 'bold') isBold = true;
@@ -356,6 +357,7 @@ const processMarks = (node: any): string => {
                     if (mark.type === 'underline') isUnderline = true;
                     if (mark.type === 'textStyle' && mark.attrs.color) color = rgbToHex(mark.attrs.color);
                     if (mark.type === 'highlight' && mark.attrs.color) bgColor = rgbToHex(mark.attrs.color);
+                    if (mark.type === 'link' && mark.attrs.href) linkHref = mark.attrs.href;
                 });
 
                 // In AsciiDoc, you can combine multiple roles like [.role1.role2]#text#
@@ -400,6 +402,13 @@ const processMarks = (node: any): string => {
                 const hasCustomColor = color && !colorName;
                 const hasCustomBg = bgColor && !bgColorName;
                 
+                // IMPORTANT: Apply link FIRST (around raw text), then wrap with color.
+                // This produces [red]##http://url[37089]## (valid AsciiDoc).
+                // If link is applied after color, we'd get http://url[[red]##text##] which is invalid.
+                if (linkHref) {
+                    text = `${linkHref}[${text}]`;
+                }
+
                 if (!hasCustomColor && !hasCustomBg && (colorName || bgColorName || isUnderline)) {
                     // Use standard role syntax: [color]##text## or [color-background]##text##
                     // Underline can be combined with these.
