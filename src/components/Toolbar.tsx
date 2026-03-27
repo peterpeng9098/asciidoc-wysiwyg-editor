@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 // @ts-ignore
 import { type Editor } from '@tiptap/core';
 import {
@@ -60,6 +60,23 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty, 
     const [tableCols, setTableCols] = useState(3);
     const [lastTextColor, setLastTextColor] = useState('#FF0000');
     const [lastHighlightColor, setLastHighlightColor] = useState('#FFFF00');
+    const [showTextColorPicker, setShowTextColorPicker] = useState(false);
+    const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+    const textColorRef = useRef<HTMLDivElement>(null);
+    const highlightRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (textColorRef.current && !textColorRef.current.contains(e.target as Node)) {
+                setShowTextColorPicker(false);
+            }
+            if (highlightRef.current && !highlightRef.current.contains(e.target as Node)) {
+                setShowHighlightPicker(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const insertTable = () => {
         setShowTableDialog(true);
@@ -164,91 +181,145 @@ const Toolbar: React.FC<ToolbarProps> = ({ editor, onExport, onImport, isDirty, 
             </div>
 
             {/* Colors & Styles */}
-            <div className="flex items-center space-x-2 border-r border-gray-300 pr-2 mr-1 relative">
-                {/* Text Color Dropdown */}
-                <div className="relative group">
-                    <button className="flex items-center p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Text Color">
-                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <text x="2" y="13" fontFamily="serif" fontSize="14" fontWeight="bold" fill="currentColor">A</text>
-                            <rect x="1" y="15" width="16" height="2.5" rx="0.5" fill={lastTextColor} />
-                        </svg>
-                    </button>
-                    <div className="absolute top-full left-0 pt-1 hidden group-hover:block z-50 w-48">
-                        <div className="bg-white border border-gray-200 shadow-xl rounded-md p-2">
-                            <div className="text-xs text-gray-500 mb-2 font-semibold">Standard Colors</div>
-                            <div className="grid grid-cols-4 gap-1 mb-3">
-                                {STANDARD_COLORS.map(color => (
-                                    <button
-                                        key={`text-${color.value}`}
-                                        className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:scale-110 transition-transform"
-                                        style={{ backgroundColor: color.value }}
-                                        title={color.name}
-                                        onClick={() => { setLastTextColor(color.value); editor.chain().focus().setColor(color.value).run(); }}
-                                    />
-                                ))}
-                            </div>
-                            <div className="text-xs text-gray-500 mb-1 mt-2 font-semibold flex justify-between items-center">
-                                Custom Color
-                                <input
-                                    type="color"
-                                    onChange={setTextColor}
-                                    value={editor.getAttributes('textStyle').color || '#000000'}
-                                    className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
-                                />
-                            </div>
-                            <button
-                                onClick={() => editor.chain().focus().unsetColor().run()}
-                                className="w-full mt-2 flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded border border-transparent hover:border-gray-200 transition-colors"
-                            >
-                                <div className="w-4 h-4 border border-gray-300 bg-white flex items-center justify-center">
-                                     <div className="w-[18px] h-[1px] bg-red-500 transform rotate-45"></div>
-                                </div>
-                                無色彩
-                            </button>
-                        </div>
+            <div className="flex items-center space-x-1.5 border-r border-gray-300 pr-2 mr-1">
+                {/* Text Color Split Button */}
+                <div className="relative" ref={textColorRef}>
+                    <div className="flex items-center rounded overflow-hidden border border-transparent hover:border-gray-300 transition-colors">
+                        {/* Main button: apply last color */}
+                        <button
+                            className="flex items-center p-1.5 hover:bg-gray-200 transition-colors text-gray-700"
+                            title={`文字顏色 (${lastTextColor})`}
+                            onClick={() => editor.chain().focus().setColor(lastTextColor).run()}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <text x="2" y="13" fontFamily="serif" fontSize="14" fontWeight="bold" fill="currentColor">A</text>
+                                <rect x="1" y="15" width="16" height="2.5" rx="0.5" fill={lastTextColor} />
+                            </svg>
+                        </button>
+                        {/* Arrow button: open picker */}
+                        <button
+                            className="flex items-center px-0.5 py-1.5 hover:bg-gray-200 transition-colors text-gray-500"
+                            title="選擇文字顏色"
+                            onClick={() => setShowTextColorPicker(v => !v)}
+                        >
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                                <path d="M2 3.5 L5 7 L8 3.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </button>
                     </div>
+                    {/* Color picker panel */}
+                    {showTextColorPicker && (
+                        <div className="absolute top-full left-0 pt-1 z-50 w-48">
+                            <div className="bg-white border border-gray-200 shadow-xl rounded-md p-2">
+                                <div className="text-xs text-gray-500 mb-2 font-semibold">Standard Colors</div>
+                                <div className="grid grid-cols-4 gap-1 mb-3">
+                                    {STANDARD_COLORS.map(color => (
+                                        <button
+                                            key={`text-${color.value}`}
+                                            className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:scale-110 transition-transform"
+                                            style={{ backgroundColor: color.value }}
+                                            title={color.name}
+                                            onClick={() => {
+                                                setLastTextColor(color.value);
+                                                editor.chain().focus().setColor(color.value).run();
+                                                setShowTextColorPicker(false);
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                                <div className="text-xs text-gray-500 mb-1 mt-2 font-semibold flex justify-between items-center">
+                                    Custom Color
+                                    <input
+                                        type="color"
+                                        onChange={(e) => {
+                                            setLastTextColor(e.target.value);
+                                            editor.chain().focus().setColor(e.target.value).run();
+                                        }}
+                                        value={lastTextColor}
+                                        className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => { editor.chain().focus().unsetColor().run(); setShowTextColorPicker(false); }}
+                                    className="w-full mt-2 flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded border border-transparent hover:border-gray-200 transition-colors"
+                                >
+                                    <div className="w-4 h-4 border border-gray-300 bg-white flex items-center justify-center">
+                                        <div className="w-[18px] h-[1px] bg-red-500 transform rotate-45"></div>
+                                    </div>
+                                    無色彩
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Highlight Color Dropdown */}
-                <div className="relative group">
-                    <button className="flex flex-col items-center p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-700" title="Highlight Color">
-                        <Highlighter size={14} />
-                        <div style={{ width: 16, height: 3, borderRadius: 1, backgroundColor: lastHighlightColor, marginTop: 1 }} />
-                    </button>
-                    <div className="absolute top-full left-0 pt-1 hidden group-hover:block z-50 w-48">
-                        <div className="bg-white border border-gray-200 shadow-xl rounded-md p-2">
-                            <div className="text-xs text-gray-500 mb-2 font-semibold">Standard Highlights</div>
-                            <div className="grid grid-cols-4 gap-1 mb-3">
-                                {STANDARD_COLORS.map(color => (
-                                    <button
-                                        key={`bg-${color.value}`}
-                                        className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:scale-110 transition-transform"
-                                        style={{ backgroundColor: color.value }}
-                                        title={color.name}
-                                        onClick={() => { setLastHighlightColor(color.value); editor.chain().focus().toggleHighlight({ color: color.value }).run(); }}
-                                    />
-                                ))}
-                            </div>
-                            <div className="text-xs text-gray-500 mb-1 mt-2 font-semibold flex justify-between items-center">
-                                Custom Highlight
-                                <input
-                                    type="color"
-                                    onChange={setHighlight}
-                                    value={editor.getAttributes('highlight').color || '#ffff00'}
-                                    className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
-                                />
-                            </div>
-                            <button
-                                onClick={() => editor.chain().focus().unsetHighlight().run()}
-                                className="w-full mt-2 flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded border border-transparent hover:border-gray-200 transition-colors"
-                            >
-                                <div className="w-4 h-4 border border-gray-300 bg-white flex items-center justify-center overflow-hidden">
-                                     <div className="w-[18px] h-[1px] bg-red-500 transform rotate-45"></div>
-                                </div>
-                                無色彩
-                            </button>
-                        </div>
+                {/* Highlight Split Button */}
+                <div className="relative" ref={highlightRef}>
+                    <div className="flex items-center rounded overflow-hidden border border-transparent hover:border-gray-300 transition-colors">
+                        {/* Main button: apply last highlight */}
+                        <button
+                            className="flex flex-col items-center p-1.5 hover:bg-gray-200 transition-colors text-gray-700"
+                            title={`螢光筆 (${lastHighlightColor})`}
+                            onClick={() => editor.chain().focus().toggleHighlight({ color: lastHighlightColor }).run()}
+                        >
+                            <Highlighter size={14} />
+                            <div style={{ width: 16, height: 3, borderRadius: 1, backgroundColor: lastHighlightColor, marginTop: 1 }} />
+                        </button>
+                        {/* Arrow button: open picker */}
+                        <button
+                            className="flex items-center px-0.5 py-1.5 hover:bg-gray-200 transition-colors text-gray-500"
+                            title="選擇螢光筆顏色"
+                            onClick={() => setShowHighlightPicker(v => !v)}
+                        >
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                                <path d="M2 3.5 L5 7 L8 3.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                        </button>
                     </div>
+                    {/* Highlight picker panel */}
+                    {showHighlightPicker && (
+                        <div className="absolute top-full left-0 pt-1 z-50 w-48">
+                            <div className="bg-white border border-gray-200 shadow-xl rounded-md p-2">
+                                <div className="text-xs text-gray-500 mb-2 font-semibold">Standard Highlights</div>
+                                <div className="grid grid-cols-4 gap-1 mb-3">
+                                    {STANDARD_COLORS.map(color => (
+                                        <button
+                                            key={`bg-${color.value}`}
+                                            className="w-8 h-8 rounded border border-gray-300 flex items-center justify-center hover:scale-110 transition-transform"
+                                            style={{ backgroundColor: color.value }}
+                                            title={color.name}
+                                            onClick={() => {
+                                                setLastHighlightColor(color.value);
+                                                editor.chain().focus().toggleHighlight({ color: color.value }).run();
+                                                setShowHighlightPicker(false);
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                                <div className="text-xs text-gray-500 mb-1 mt-2 font-semibold flex justify-between items-center">
+                                    Custom Highlight
+                                    <input
+                                        type="color"
+                                        onChange={(e) => {
+                                            setLastHighlightColor(e.target.value);
+                                            editor.chain().focus().toggleHighlight({ color: e.target.value }).run();
+                                        }}
+                                        value={lastHighlightColor}
+                                        className="w-6 h-6 border-0 p-0 cursor-pointer rounded"
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => { editor.chain().focus().unsetHighlight().run(); setShowHighlightPicker(false); }}
+                                    className="w-full mt-2 flex items-center gap-2 px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded border border-transparent hover:border-gray-200 transition-colors"
+                                >
+                                    <div className="w-4 h-4 border border-gray-300 bg-white flex items-center justify-center overflow-hidden">
+                                        <div className="w-[18px] h-[1px] bg-red-500 transform rotate-45"></div>
+                                    </div>
+                                    無色彩
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
